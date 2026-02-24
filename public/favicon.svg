@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Aircon Control">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#18181b"/>
+      <stop offset="100%" stop-color="#3f3f46"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <rect x="14" y="16" width="36" height="16" rx="6" fill="#fafafa"/>
+  <rect x="19" y="21" width="14" height="3" rx="1.5" fill="#a1a1aa"/>
+  <circle cx="43" cy="24" r="3" fill="#22d3ee"/>
+
+  <path d="M32 36v12" stroke="#e4e4e7" stroke-width="3.2" stroke-linecap="round"/>
+  <path d="M25 43c0-3.9 3.1-7 7-7s7 3.1 7 7" fill="none" stroke="#e4e4e7" stroke-width="3" stroke-linecap="round"/>
+</svg>
