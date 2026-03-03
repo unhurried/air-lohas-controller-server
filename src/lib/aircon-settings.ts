@@ -1,45 +1,16 @@
 import { getCloudflareContext } from "@opennextjs/cloudflare";
-
-export const ROOM_NAMES = [
-  "リビング",
-  "寝室",
-  "書斎",
-  "玄関",
-  "洗面室",
-  "子供部屋1",
-  "子供部屋2",
-  "ホール2",
-] as const;
-
-export type RoomName = (typeof ROOM_NAMES)[number];
-
-export type AirconMode = "auto-steady" | "auto-save";
-
-export type AirconSettings = {
-  mode: AirconMode;
-  baseTemperature: number;
-  roomOffsets: Record<RoomName, number>;
-};
-
-export type AirconReservation = {
-  id: string;
-  time: string;
-  enabled: boolean;
-  settings: AirconSettings;
-  lastAppliedDate?: string;
-};
-
-export type AirconState = {
-  currentSettings: AirconSettings;
-  reservations: AirconReservation[];
-};
-
-export const MODE_OPTIONS: Array<{ value: AirconMode; label: string }> = [
-  { value: "auto-steady", label: "自動定常" },
-  { value: "auto-save", label: "自動セーブ" },
-];
+import {
+  ROOM_NAMES,
+  type RoomName,
+  type AirconSettings,
+  type CurrentAirconSettings,
+  type AirconReservation,
+  type AirconState,
+} from "./aircon-types";
+import { normalizeMode, parseMode, appModeToKvMode } from "./aircon-mode";
 
 const SETTINGS_KEY = "aircon-settings-v1";
+const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS: AirconSettings = {
   mode: "auto-steady",
@@ -56,7 +27,12 @@ const DEFAULT_SETTINGS: AirconSettings = {
   },
 };
 
-let localFallback = structuredClone(DEFAULT_SETTINGS);
+const DEFAULT_CURRENT_SETTINGS: CurrentAirconSettings = {
+  ...DEFAULT_SETTINGS,
+  updatedAt: DEFAULT_UPDATED_AT,
+};
+
+let localFallback = structuredClone(DEFAULT_CURRENT_SETTINGS);
 let localReservationsFallback: AirconReservation[] = [];
 
 export function clampTemperature(value: number): number {
@@ -75,16 +51,14 @@ export function clampOffset(value: number): number {
   return Math.min(2, Math.max(-2, Math.trunc(value)));
 }
 
-export function parseMode(value: FormDataEntryValue | null): AirconMode {
-  return value === "auto-save" ? "auto-save" : "auto-steady";
-}
-
 export function parseSettingsFromFormData(
   formData: FormData,
   fallbackRoomOffsets: AirconSettings["roomOffsets"],
 ): AirconSettings {
   const mode = parseMode(formData.get("mode"));
-  const baseTemperature = clampTemperature(Number(formData.get("baseTemperature")));
+  const baseTemperature = clampTemperature(
+    Number(formData.get("baseTemperature")),
+  );
 
   const roomOffsets: AirconSettings["roomOffsets"] = { ...fallbackRoomOffsets };
 
@@ -102,8 +76,7 @@ export function parseSettingsFromFormData(
 function normalizeSettings(value: unknown): AirconSettings {
   const source = (value ?? {}) as Partial<AirconSettings>;
 
-  const normalizedMode: AirconMode =
-    source.mode === "auto-save" ? "auto-save" : "auto-steady";
+  const normalizedMode = normalizeMode(source.mode);
 
   const normalizedRoomOffsets = ROOM_NAMES.reduce<Record<RoomName, number>>(
     (result, room) => {
@@ -117,6 +90,24 @@ function normalizeSettings(value: unknown): AirconSettings {
     mode: normalizedMode,
     baseTemperature: clampTemperature(source.baseTemperature ?? 22),
     roomOffsets: normalizedRoomOffsets,
+  };
+}
+
+function normalizeUpdatedAt(value: unknown): string {
+  if (typeof value !== "string") {
+    return DEFAULT_UPDATED_AT;
+  }
+
+  return Number.isNaN(Date.parse(value)) ? DEFAULT_UPDATED_AT : value;
+}
+
+function normalizeCurrentSettings(value: unknown): CurrentAirconSettings {
+  const source = (value ?? {}) as { updatedAt?: unknown };
+  const settings = normalizeSettings(value);
+
+  return {
+    ...settings,
+    updatedAt: normalizeUpdatedAt(source.updatedAt),
   };
 }
 
@@ -161,7 +152,7 @@ function normalizeState(value: unknown): AirconState {
     value !== null
   ) {
     return {
-      currentSettings: normalizeSettings(value),
+      currentSettings: normalizeCurrentSettings(value),
       reservations: [],
     };
   }
@@ -171,7 +162,7 @@ function normalizeState(value: unknown): AirconState {
     : [];
 
   return {
-    currentSettings: normalizeSettings(source.currentSettings),
+    currentSettings: normalizeCurrentSettings(source.currentSettings),
     reservations: reservationsSource
       .map((item) => normalizeReservation(item))
       .filter((item): item is AirconReservation => item !== null),
@@ -187,7 +178,24 @@ function getKvBinding(): KVNamespace | undefined {
   }
 }
 
-export async function getSettings(): Promise<AirconSettings> {
+/** Convert app state to JSON for Cloudflare KV storage (maps "off" → "-"). */
+function toKvJson(state: AirconState): string {
+  return JSON.stringify({
+    currentSettings: {
+      ...state.currentSettings,
+      mode: appModeToKvMode(state.currentSettings.mode),
+    },
+    reservations: state.reservations.map((reservation) => ({
+      ...reservation,
+      settings: {
+        ...reservation.settings,
+        mode: appModeToKvMode(reservation.settings.mode),
+      },
+    })),
+  });
+}
+
+export async function getSettings(): Promise<CurrentAirconSettings> {
   return (await getAppState()).currentSettings;
 }
 
@@ -202,7 +210,7 @@ export async function getAppState(): Promise<AirconState> {
     const raw = await kv.get(SETTINGS_KEY);
     if (!raw) {
       return {
-        currentSettings: structuredClone(DEFAULT_SETTINGS),
+        currentSettings: structuredClone(DEFAULT_CURRENT_SETTINGS),
         reservations: [],
       };
     }
@@ -212,7 +220,7 @@ export async function getAppState(): Promise<AirconState> {
       return normalizeState(parsed);
     } catch {
       return {
-        currentSettings: structuredClone(DEFAULT_SETTINGS),
+        currentSettings: structuredClone(DEFAULT_CURRENT_SETTINGS),
         reservations: [],
       };
     }
@@ -229,18 +237,22 @@ export async function getAppState(): Promise<AirconState> {
 export async function saveSettings(nextSettings: AirconSettings): Promise<void> {
   const currentState = await getAppState();
   const normalized = normalizeSettings(nextSettings);
+  const nextCurrentSettings: CurrentAirconSettings = {
+    ...normalized,
+    updatedAt: new Date().toISOString(),
+  };
   const nextState: AirconState = {
-    currentSettings: normalized,
+    currentSettings: nextCurrentSettings,
     reservations: currentState.reservations,
   };
   const kv = getKvBinding();
 
   if (kv) {
-    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
+    await kv.put(SETTINGS_KEY, toKvJson(nextState));
     return;
   }
 
-  localFallback = normalized;
+  localFallback = nextCurrentSettings;
 }
 
 export async function saveReservations(nextReservations: AirconReservation[]): Promise<void> {
@@ -257,7 +269,7 @@ export async function saveReservations(nextReservations: AirconReservation[]): P
   const kv = getKvBinding();
 
   if (kv) {
-    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
+    await kv.put(SETTINGS_KEY, toKvJson(nextState));
     return;
   }
 

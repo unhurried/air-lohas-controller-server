@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  clampOffset,
-  clampTemperature,
   ROOM_NAMES,
   type AirconReservation,
   type AirconSettings,
   type RoomName,
-} from "@/lib/aircon-settings";
+} from "@/lib/aircon-types";
+import { clampOffset, clampTemperature } from "@/lib/aircon-settings";
+import { getModeLabel } from "@/lib/aircon-mode";
 import { ModeButtonGroup } from "@/components/aircon/mode-button-group";
 import { BaseTemperatureStepper } from "@/components/aircon/base-temperature-stepper";
 import { RoomOffsetGrid } from "@/components/aircon/room-offset-grid";
@@ -207,7 +207,7 @@ export function ReservationsForm({
                   </div>
                 </div>
                 <p className="mt-1.5 text-xs text-zinc-600 sm:mt-2 dark:text-zinc-300">
-                  {reservation.settings.mode === "auto-save" ? "自動セーブ" : "自動定常"}
+                  {getModeLabel(reservation.settings.mode)}
                   {" / "}
                   基準 {reservation.settings.baseTemperature}℃
                 </p>

@@ -1,4 +1,5 @@
-import { MODE_OPTIONS, type AirconMode } from "@/lib/aircon-settings";
+import type { AirconMode } from "@/lib/aircon-types";
+import { MODE_OPTIONS } from "@/lib/aircon-mode";
 
 type ModeButtonGroupProps = {
   label: string;
@@ -16,7 +17,7 @@ export function ModeButtonGroup({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium">{label}</span>
-      <div className="grid grid-cols-2 gap-2" role="group" aria-label={ariaLabel}>
+      <div className="grid grid-cols-3 gap-2" role="group" aria-label={ariaLabel}>
         {MODE_OPTIONS.map((option) => (
           <button
             key={option.value}

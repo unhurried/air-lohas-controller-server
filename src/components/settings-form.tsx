@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  clampTemperature,
   ROOM_NAMES,
   type AirconSettings,
   type RoomName,
-} from "@/lib/aircon-settings";
+} from "@/lib/aircon-types";
+import { clampTemperature } from "@/lib/aircon-settings";
 import { ModeButtonGroup } from "@/components/aircon/mode-button-group";
 import { BaseTemperatureStepper } from "@/components/aircon/base-temperature-stepper";
 import { RoomOffsetGrid } from "@/components/aircon/room-offset-grid";

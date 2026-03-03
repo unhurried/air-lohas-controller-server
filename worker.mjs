@@ -5,6 +5,7 @@ import openNextWorker, {
 } from "./.open-next/worker.js";
 
 const SETTINGS_KEY = "aircon-settings-v1";
+const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS = {
   mode: "auto-steady",
@@ -54,6 +55,24 @@ function normalizeSettings(value) {
   };
 }
 
+function normalizeUpdatedAt(value) {
+  if (typeof value !== "string") {
+    return DEFAULT_UPDATED_AT;
+  }
+
+  return Number.isNaN(Date.parse(value)) ? DEFAULT_UPDATED_AT : value;
+}
+
+function normalizeCurrentSettings(value) {
+  const source = value ?? {};
+  const settings = normalizeSettings(value);
+
+  return {
+    ...settings,
+    updatedAt: normalizeUpdatedAt(source.updatedAt),
+  };
+}
+
 function normalizeTime(value) {
   if (typeof value !== "string") {
     return "00:00";
@@ -88,7 +107,7 @@ function normalizeState(value) {
     value !== null
   ) {
     return {
-      currentSettings: normalizeSettings(value),
+      currentSettings: normalizeCurrentSettings(value),
       reservations: [],
     };
   }
@@ -100,7 +119,7 @@ function normalizeState(value) {
     : [];
 
   return {
-    currentSettings: normalizeSettings(source.currentSettings),
+    currentSettings: normalizeCurrentSettings(source.currentSettings),
     reservations,
   };
 }
@@ -167,7 +186,10 @@ async function applyReservationsByCron(env) {
   await kv.put(
     SETTINGS_KEY,
     JSON.stringify({
-      currentSettings: latest.settings,
+      currentSettings: {
+        ...latest.settings,
+        updatedAt: new Date().toISOString(),
+      },
       reservations: nextReservations,
     }),
   );
