@@ -40,7 +40,7 @@ export function clampTemperature(value: number): number {
     return DEFAULT_SETTINGS.baseTemperature;
   }
 
-  return Math.min(25, Math.max(18, Math.trunc(value)));
+  return Math.min(30, Math.max(16, Math.trunc(value)));
 }
 
 export function clampOffset(value: number): number {

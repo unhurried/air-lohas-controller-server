@@ -92,8 +92,8 @@ export function SettingsForm({
         <BaseTemperatureStepper
           label="基準温度"
           value={settings.baseTemperature}
-          min={18}
-          max={25}
+          min={16}
+          max={30}
           onChange={updateBaseTemperature}
         />
       </div>

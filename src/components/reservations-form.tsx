@@ -138,8 +138,8 @@ export function ReservationsForm({
         <BaseTemperatureStepper
           label="予約時の基準温度"
           value={draftSettings.baseTemperature}
-          min={18}
-          max={25}
+          min={16}
+          max={30}
           onChange={updateBaseTemperature}
         />
       </div>
