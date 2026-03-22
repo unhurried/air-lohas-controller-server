@@ -7,7 +7,7 @@ import {
   type AirconReservation,
   type AirconState,
 } from "./aircon-types";
-import { normalizeMode, parseMode, appModeToKvMode } from "./aircon-mode";
+import { normalizeMode, parseMode } from "./aircon-mode";
 
 const SETTINGS_KEY = "aircon-settings-v1";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
@@ -178,22 +178,7 @@ function getKvBinding(): KVNamespace | undefined {
   }
 }
 
-/** Convert app state to JSON for Cloudflare KV storage (maps "off" → "-"). */
-function toKvJson(state: AirconState): string {
-  return JSON.stringify({
-    currentSettings: {
-      ...state.currentSettings,
-      mode: appModeToKvMode(state.currentSettings.mode),
-    },
-    reservations: state.reservations.map((reservation) => ({
-      ...reservation,
-      settings: {
-        ...reservation.settings,
-        mode: appModeToKvMode(reservation.settings.mode),
-      },
-    })),
-  });
-}
+
 
 export async function getSettings(): Promise<CurrentAirconSettings> {
   return (await getAppState()).currentSettings;
@@ -248,7 +233,7 @@ export async function saveSettings(nextSettings: AirconSettings): Promise<void> 
   const kv = getKvBinding();
 
   if (kv) {
-    await kv.put(SETTINGS_KEY, toKvJson(nextState));
+    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
     return;
   }
 
@@ -269,7 +254,7 @@ export async function saveReservations(nextReservations: AirconReservation[]): P
   const kv = getKvBinding();
 
   if (kv) {
-    await kv.put(SETTINGS_KEY, toKvJson(nextState));
+    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
     return;
   }
 

@@ -191,7 +191,7 @@ test.describe("Reservations page", () => {
     await offButton.click();
     await expect(offButton).toHaveAttribute("aria-pressed", "true");
 
-    // Add reservation with "off" mode
+    // Add reservation with "-" (off) mode
     const timeInput = page.locator('input[type="time"]');
     await timeInput.fill("23:00");
     await page.getByRole("button", { name: "この設定で予約追加" }).click();

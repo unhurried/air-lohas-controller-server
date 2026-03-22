@@ -110,7 +110,7 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
 
 - `src/middleware.ts` — アクセス制御（`ACCESS_SECRET`クエリパラメータまたはCookieで認証、8時間TTL）
 - `src/lib/aircon-settings.ts` — KVの読み書き・バリデーション・正規化。KV未接続時はインメモリフォールバック
-- `src/lib/aircon-mode.ts` — 運転モードのヘルパー（アプリ内`"off"`⇔ KV内`"-"`の変換含む）
+- `src/lib/aircon-mode.ts` — 運転モードのヘルパー（ラベル取得・正規化）
 - `src/lib/aircon-types.ts` — 型定義
 - `worker.mjs` — Cloudflare Workerエントリポイント（fetch + cronスケジュールハンドラ）
 
