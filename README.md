@@ -16,7 +16,8 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
 | `npm run test:e2e` | Playwright E2Eテスト実行（devサーバーをport 3099で自動起動） |
 | `npm run cf:build` | Cloudflare Workers向けビルド（OpenNext） |
 | `npm run cf:preview` | Cloudflareローカルプレビュー |
-| `npm run cf:deploy` | Cloudflareデプロイ |
+| `npm run cf:deploy:stg` | ステージング環境へデプロイ |
+| `npm run cf:deploy:prod` | 本番環境へデプロイ |
 
 ### ローカル環境での起動（開発モード）
 
@@ -34,30 +35,53 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
 
 ## Cloudflareへのデプロイ
 
+### デプロイ先環境
+
+| 環境 | Worker名 | 用途 |
+|-----|---------|------|
+| stg | ac-stg | ステージング環境 |
+| prod | ac-prod | 本番環境 |
+
+### デプロイ手順
+
 * (初回のみ) Cloudflarにログインする。
 
   ```
   wrangler login
   ```
 
-* Cloudflare Workers KVを作成する。
+* Cloudflare Workers KVを環境ごとに作成する。
 
   ```bash
-  npx wrangler kv namespace create AC_SETTINGS_KV
+  # ステージング環境用
+  npx wrangler kv namespace create AC_SETTINGS --env stg
+
+  # 本番環境用
+  npx wrangler kv namespace create AC_SETTINGS --env prod
   ```
 
-  * 出力された namespace ID を `wrangler.jsonc` の `kv_namespaces[0].id` に設定する。
+  * 出力された namespace ID をそれぞれ `wrangler.jsonc` の対応する環境の `kv_namespaces[0].id` に設定する。
+    * stg: `env.stg.kv_namespaces[0].id`
+    * prod: `env.prod.kv_namespaces[0].id`
 
-* 鍵をSecretsに登録する。
+* 鍵を環境ごとに Secrets に登録する。
 
   ```bash
-  wrangler secret put ACCESS_SECRET
+  # ステージング環境用
+  npx wrangler secret put ACCESS_SECRET --env stg
+
+  # 本番環境用
+  npx wrangler secret put ACCESS_SECRET --env prod
   ```
 
-* Cloudflare Workersにアプリケーションをデプロイする。
+* Cloudflare Workers にアプリケーションをデプロイする。
 
   ```bash
-  npm run cf:deploy
+  # ステージング環境へデプロイ
+  npm run cf:deploy:stg
+
+  # 本番環境へデプロイ
+  npm run cf:deploy:prod
   ```
 
 ## アーキテクチャ
@@ -104,4 +128,4 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
 `.env.example`を`.env.local`にコピーして設定:
 - `ACCESS_SECRET` — アプリアクセス用シークレットキー（必須）
 
-Cloudflareデプロイ時は`wrangler secret put ACCESS_SECRET`で設定する。
+Cloudflareデプロイ時は`wrangler secret put ACCESS_SECRET --env stg`（または`--env prod`）で設定する。

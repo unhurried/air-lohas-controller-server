@@ -10,7 +10,8 @@
     "test:e2e": "playwright test",
     "cf:build": "opennextjs-cloudflare build",
     "cf:preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cf:deploy:stg": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env stg",
+    "cf:deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env prod"
   },
   "dependencies": {
     "next": "16.1.6",

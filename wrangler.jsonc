@@ -15,11 +15,25 @@
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
-	"kv_namespaces": [
-		{
-			"binding": "AC_SETTINGS_KV",
-			"id": "your-kv-id",
-			"remote": true
+	"env": {
+		"stg": {
+			"name": "ac-stg",
+			"kv_namespaces": [
+				{
+					"binding": "AC_SETTINGS_KV",
+					"id": "your-kv-id",
+					"remote": true
+				}
+			]
+		},
+		"prod": {
+			"name": "ac",
+			"kv_namespaces": [
+				{
+					"binding": "AC_SETTINGS_KV",
+					"id": "your-kv-id",
+				}
+			]
 		}
-	]
+	}
 }
