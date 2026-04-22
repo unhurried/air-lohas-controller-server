@@ -27,7 +27,7 @@ test.describe("Reservations page", () => {
   });
 
   test("shows reservation list section", async ({ page }) => {
-    await expect(page.getByText("予約一覧")).toBeVisible();
+    await expect(page.getByRole("button", { name: "予約追加" })).toBeVisible();
   });
 
   test("shows time input and add button", async ({ page }) => {

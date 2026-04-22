@@ -205,19 +205,15 @@ export function ReservationsForm({
   return (
     <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
       <div className="space-y-2.5 sm:space-y-3">
-        <h2 className="text-sm font-semibold">予約一覧</h2>
-
         <div className="flex flex-wrap items-end gap-2">
-          <label className="space-y-1">
-            <span className="text-sm">時刻</span>
-            <input
-              type="time"
-              step={60}
-              value={reservationTime}
-              onChange={(event) => setReservationTime(event.target.value)}
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
-            />
-          </label>
+          <input
+            type="time"
+            step={60}
+            aria-label="時刻"
+            value={reservationTime}
+            onChange={(event) => setReservationTime(event.target.value)}
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          />
           <button
             type="button"
             onClick={createReservation}
