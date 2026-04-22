@@ -23,20 +23,48 @@ export default async function ReservationsPage() {
       ? reservationTimeRaw
       : "00:00";
 
-    const settings = parseSettingsFromFormData(
-      formData,
-      currentSettings.roomOffsets,
-    );
+    const { currentSettings: latestSettings } = await getAppState();
 
     const nextReservation: AirconReservation = {
       id: crypto.randomUUID(),
       time: reservationTime,
       enabled: true,
-      settings,
+      settings: {
+        mode: latestSettings.mode,
+        baseTemperature: latestSettings.baseTemperature,
+        roomOffsets: latestSettings.roomOffsets,
+      },
     };
 
     const existingReservations = await getReservations();
     await saveReservations([...existingReservations, nextReservation]);
+
+    revalidatePath("/reservations");
+  }
+
+  async function updateReservation(formData: FormData) {
+    "use server";
+
+    const reservationId = String(formData.get("reservationId") ?? "");
+    const reservationTimeRaw = String(formData.get("reservationTime") ?? "");
+    const reservationTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(reservationTimeRaw)
+      ? reservationTimeRaw
+      : "00:00";
+
+    const settings = parseSettingsFromFormData(
+      formData,
+      currentSettings.roomOffsets,
+    );
+
+    const existingReservations = await getReservations();
+
+    await saveReservations(
+      existingReservations.map((reservation) =>
+        reservation.id === reservationId
+          ? { ...reservation, time: reservationTime, settings }
+          : reservation,
+      ),
+    );
 
     revalidatePath("/reservations");
   }
@@ -85,9 +113,10 @@ export default async function ReservationsPage() {
         </div>
 
         <ReservationsForm
-          initialDraftSettings={currentSettings}
+          currentSettings={currentSettings}
           initialReservations={reservations}
           addReservation={addReservation}
+          updateReservation={updateReservation}
           toggleReservation={toggleReservation}
           deleteReservation={deleteReservation}
         />
