@@ -166,15 +166,13 @@ test.describe("Reservations page", () => {
     await expect(page.getByRole("button", { name: "基準温度を上げる" })).toBeVisible();
     await expect(page.getByRole("button", { name: "基準温度を下げる" })).toBeVisible();
     await expect(page.getByText("各部屋温度補正（基準温度比）")).toBeVisible();
-    await expect(page.getByRole("button", { name: "保存" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "キャンセル" })).toBeVisible();
 
     // Room offset sliders should be visible
     const sliders = page.locator('input[type="range"]');
     await expect(sliders).toHaveCount(8);
   });
 
-  test("can edit a reservation's mode and save", async ({ page }) => {
+  test("can edit a reservation's mode immediately", async ({ page }) => {
     // Add a reservation
     const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("15:00");
@@ -191,16 +189,13 @@ test.describe("Reservations page", () => {
     await expect(
       modeGroup.getByRole("button", { name: "電源オフ" }),
     ).toHaveAttribute("aria-pressed", "true");
-
-    // Save
-    await page.getByRole("button", { name: "保存" }).click();
     await page.waitForTimeout(300);
 
     // The reservation header should now show "電源オフ"
     await expect(page.getByText("電源オフ").first()).toBeVisible();
   });
 
-  test("can cancel editing a reservation", async ({ page }) => {
+  test("can edit a reservation time immediately", async ({ page }) => {
     // Add a reservation
     const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("16:00");
@@ -210,13 +205,10 @@ test.describe("Reservations page", () => {
 
     // Expand
     await page.getByRole("button", { name: /16:00/ }).click();
-    await expect(page.getByRole("button", { name: "保存" })).toBeVisible();
+    await page.locator('input[type="time"]').nth(1).fill("16:30");
+    await page.waitForTimeout(300);
 
-    // Cancel
-    await page.getByRole("button", { name: "キャンセル" }).click();
-
-    // Edit controls should be hidden
-    await expect(page.getByRole("button", { name: "保存" })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: /16:30/ })).toBeVisible();
   });
 
   test("can collapse an expanded reservation by clicking time again", async ({ page }) => {
@@ -229,10 +221,10 @@ test.describe("Reservations page", () => {
     // Expand
     const expandButton = page.getByRole("button", { name: /17:00/ });
     await expandButton.click();
-    await expect(page.getByRole("button", { name: "保存" })).toBeVisible();
+    await expect(page.getByText("予約時刻")).toBeVisible();
 
     // Collapse by clicking time again
     await expandButton.click();
-    await expect(page.getByRole("button", { name: "保存" })).not.toBeVisible();
+    await expect(page.getByText("予約時刻")).not.toBeVisible();
   });
 });

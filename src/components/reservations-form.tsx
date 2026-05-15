@@ -51,9 +51,6 @@ export function ReservationsForm({
   const [reservationTime, setReservationTime] = useState("07:00");
   const [reservations, setReservations] = useState(initialReservations);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editDrafts, setEditDrafts] = useState<
-    Record<string, { settings: AirconSettings; time: string }>
-  >({});
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -65,80 +62,83 @@ export function ReservationsForm({
       setExpandedId(null);
     } else {
       setExpandedId(reservationId);
-      const reservation = reservations.find((r) => r.id === reservationId);
-      if (reservation) {
-        setEditDrafts((prev) => ({
-          ...prev,
-          [reservationId]: {
-            settings: structuredClone(reservation.settings),
-            time: reservation.time,
-          },
-        }));
-      }
     }
   };
 
+  const persistReservation = (nextReservation: AirconReservation) => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(nextReservation.time)) {
+      return;
+    }
+
+    startTransition(() => {
+      void updateReservation(
+        toUpdateFormData(
+          nextReservation.id,
+          nextReservation.settings,
+          nextReservation.time,
+        ),
+      );
+    });
+  };
+
+  const updateEditedReservation = (
+    reservationId: string,
+    updater: (reservation: AirconReservation) => AirconReservation,
+  ) => {
+    const currentReservation = reservations.find(
+      (reservation) => reservation.id === reservationId,
+    );
+
+    if (!currentReservation) {
+      return;
+    }
+
+    const nextReservation = updater(currentReservation);
+
+    setReservations((previous) =>
+      previous.map((reservation) =>
+        reservation.id === reservationId ? nextReservation : reservation,
+      ),
+    );
+
+    persistReservation(nextReservation);
+  };
+
   const updateEditMode = (reservationId: string, mode: AirconSettings["mode"]) => {
-    setEditDrafts((prev) => ({
-      ...prev,
-      [reservationId]: {
-        ...prev[reservationId],
-        settings: { ...prev[reservationId].settings, mode },
-      },
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: { ...reservation.settings, mode },
     }));
   };
 
   const updateEditBaseTemperature = (reservationId: string, baseTemperature: number) => {
-    setEditDrafts((prev) => ({
-      ...prev,
-      [reservationId]: {
-        ...prev[reservationId],
-        settings: {
-          ...prev[reservationId].settings,
-          baseTemperature: clampTemperature(baseTemperature),
-        },
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: {
+        ...reservation.settings,
+        baseTemperature: clampTemperature(baseTemperature),
       },
     }));
   };
 
   const updateEditRoomOffset = (reservationId: string, room: RoomName, offset: number) => {
-    setEditDrafts((prev) => ({
-      ...prev,
-      [reservationId]: {
-        ...prev[reservationId],
-        settings: {
-          ...prev[reservationId].settings,
-          roomOffsets: {
-            ...prev[reservationId].settings.roomOffsets,
-            [room]: clampOffset(offset),
-          },
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: {
+        ...reservation.settings,
+        roomOffsets: {
+          ...reservation.settings.roomOffsets,
+          [room]: clampOffset(offset),
         },
       },
     }));
   };
 
   const updateEditTime = (reservationId: string, time: string) => {
-    setEditDrafts((prev) => ({
-      ...prev,
-      [reservationId]: { ...prev[reservationId], time },
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      time,
     }));
-  };
-
-  const saveEdit = (reservationId: string) => {
-    const draft = editDrafts[reservationId];
-    if (!draft) return;
-
-    setReservations((prev) =>
-      prev.map((r) =>
-        r.id === reservationId ? { ...r, settings: draft.settings, time: draft.time } : r,
-      ),
-    );
-
-    setExpandedId(null);
-
-    startTransition(() => {
-      void updateReservation(toUpdateFormData(reservationId, draft.settings, draft.time));
-    });
   };
 
   const createReservation = () => {
@@ -230,7 +230,6 @@ export function ReservationsForm({
 
           {sortedReservations.map((reservation) => {
             const isExpanded = expandedId === reservation.id;
-            const draft = editDrafts[reservation.id];
 
             return (
               <div
@@ -273,7 +272,7 @@ export function ReservationsForm({
                   </div>
                 </div>
 
-                {isExpanded && draft && (
+                {isExpanded && (
                   <div className="border-t border-zinc-200 p-2.5 sm:p-3 dark:border-zinc-800">
                     <div className="space-y-3 sm:space-y-4">
                       <label className="block space-y-1">
@@ -281,7 +280,7 @@ export function ReservationsForm({
                         <input
                           type="time"
                           step={60}
-                          value={draft.time}
+                          value={reservation.time}
                           onChange={(event) =>
                             updateEditTime(reservation.id, event.target.value)
                           }
@@ -293,13 +292,13 @@ export function ReservationsForm({
                         <ModeButtonGroup
                           label="動作モード"
                           ariaLabel="動作モード"
-                          value={draft.settings.mode}
+                          value={reservation.settings.mode}
                           onChange={(mode) => updateEditMode(reservation.id, mode)}
                         />
 
                         <BaseTemperatureStepper
                           label="基準温度"
-                          value={draft.settings.baseTemperature}
+                          value={reservation.settings.baseTemperature}
                           min={16}
                           max={30}
                           onChange={(temp) =>
@@ -310,28 +309,11 @@ export function ReservationsForm({
 
                       <RoomOffsetGrid
                         title="各部屋温度補正（基準温度比）"
-                        offsets={draft.settings.roomOffsets}
+                        offsets={reservation.settings.roomOffsets}
                         onChange={(room, offset) =>
                           updateEditRoomOffset(reservation.id, room, offset)
                         }
                       />
-
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => saveEdit(reservation.id)}
-                          className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
-                        >
-                          保存
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedId(null)}
-                          className="rounded-md border border-zinc-300 px-4 py-2 text-sm dark:border-zinc-700"
-                        >
-                          キャンセル
-                        </button>
-                      </div>
                     </div>
                   </div>
                 )}
