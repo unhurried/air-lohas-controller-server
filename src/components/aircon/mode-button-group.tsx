@@ -17,7 +17,11 @@ export function ModeButtonGroup({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium">{label}</span>
-      <div className="grid grid-cols-3 gap-2" role="group" aria-label={ariaLabel}>
+      <div
+        className="grid grid-cols-4 gap-2"
+        role="group"
+        aria-label={ariaLabel}
+      >
         {MODE_OPTIONS.map((option) => (
           <button
             key={option.value}

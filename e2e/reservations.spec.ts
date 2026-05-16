@@ -183,16 +183,16 @@ test.describe("Reservations page", () => {
     // Expand the reservation
     await page.getByRole("button", { name: /15:00/ }).click();
 
-    // Change mode to "電源オフ"
+    // Change mode to "オフ"
     const modeGroup = page.getByRole("group", { name: "動作モード" });
-    await modeGroup.getByRole("button", { name: "電源オフ" }).click();
+    await modeGroup.getByRole("button", { name: "オフ" }).click();
     await expect(
-      modeGroup.getByRole("button", { name: "電源オフ" }),
+      modeGroup.getByRole("button", { name: "オフ" }),
     ).toHaveAttribute("aria-pressed", "true");
     await page.waitForTimeout(300);
 
-    // The reservation header should now show "電源オフ"
-    await expect(page.getByText("電源オフ").first()).toBeVisible();
+    // The reservation header should now show "オフ"
+    await expect(page.getByText("オフ").first()).toBeVisible();
   });
 
   test("can edit a reservation time immediately", async ({ page }) => {

@@ -11,7 +11,7 @@ export const ROOM_NAMES = [
 
 export type RoomName = (typeof ROOM_NAMES)[number];
 
-export type AirconMode = "auto-steady" | "auto-save" | "-";
+export type AirconMode = "-" | "auto-save" | "heat" | "cool";
 
 export type AirconSettings = {
   mode: AirconMode;

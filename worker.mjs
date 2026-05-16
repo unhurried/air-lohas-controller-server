@@ -8,7 +8,7 @@ const SETTINGS_KEY = "aircon-settings-v1";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS = {
-  mode: "auto-steady",
+  mode: "auto-save",
   baseTemperature: 22,
   roomOffsets: {
     リビング: 0,
@@ -40,6 +40,22 @@ function clampOffset(value) {
   return Math.min(2, Math.max(-2, Math.trunc(value)));
 }
 
+function normalizeMode(value) {
+  if (value === "cool") {
+    return "cool";
+  }
+
+  if (value === "heat") {
+    return "heat";
+  }
+
+  if (value === "-") {
+    return "-";
+  }
+
+  return "auto-save";
+}
+
 function normalizeSettings(value) {
   const source = value ?? {};
 
@@ -49,7 +65,7 @@ function normalizeSettings(value) {
   }, { ...DEFAULT_SETTINGS.roomOffsets });
 
   return {
-    mode: source.mode === "auto-save" ? "auto-save" : "auto-steady",
+    mode: normalizeMode(source.mode),
     baseTemperature: clampTemperature(source.baseTemperature ?? 22),
     roomOffsets,
   };

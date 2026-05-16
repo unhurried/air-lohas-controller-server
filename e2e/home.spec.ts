@@ -5,13 +5,13 @@ test.describe("Home page – settings", () => {
   test.beforeEach(async ({ page }) => {
     await authenticate(page, "/");
 
-    // Reset mode to 自動定常
-    const steadyButton = page
+    // Reset mode to セーブ
+    const saveButton = page
       .getByRole("group", { name: "動作モード" })
-      .getByRole("button", { name: "自動定常" });
+      .getByRole("button", { name: "セーブ" });
 
-    if ((await steadyButton.getAttribute("aria-pressed")) !== "true") {
-      await steadyButton.click();
+    if ((await saveButton.getAttribute("aria-pressed")) !== "true") {
+      await saveButton.click();
     }
 
     // Reset temperature to 22℃ if needed
@@ -42,44 +42,64 @@ test.describe("Home page – settings", () => {
     ).toBeVisible();
   });
 
-  test("shows mode button group with three options", async ({ page }) => {
+  test("shows mode button group with four options", async ({ page }) => {
     const modeGroup = page.getByRole("group", { name: "動作モード" });
     await expect(modeGroup).toBeVisible();
 
-    await expect(modeGroup.getByRole("button", { name: "電源オフ" })).toBeVisible();
-    await expect(modeGroup.getByRole("button", { name: "自動定常" })).toBeVisible();
-    await expect(modeGroup.getByRole("button", { name: "自動セーブ" })).toBeVisible();
+    await expect(modeGroup.getByRole("button", { name: "オフ" })).toBeVisible();
+    await expect(modeGroup.getByRole("button", { name: "セーブ" })).toBeVisible();
+    await expect(modeGroup.getByRole("button", { name: "暖房" })).toBeVisible();
+    await expect(modeGroup.getByRole("button", { name: "冷房" })).toBeVisible();
   });
 
-  test("default mode is auto-steady (自動定常)", async ({ page }) => {
-    const steadyButton = page
+  test("default mode is auto-save (セーブ)", async ({ page }) => {
+    const saveButton = page
       .getByRole("group", { name: "動作モード" })
-      .getByRole("button", { name: "自動定常" });
-    await expect(steadyButton).toHaveAttribute("aria-pressed", "true");
+      .getByRole("button", { name: "セーブ" });
+    await expect(saveButton).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("can switch mode to 電源オフ", async ({ page }) => {
+  test("can switch mode to オフ", async ({ page }) => {
     const modeGroup = page.getByRole("group", { name: "動作モード" });
-    const offButton = modeGroup.getByRole("button", { name: "電源オフ" });
+    const offButton = modeGroup.getByRole("button", { name: "オフ" });
 
     await offButton.click();
     await expect(offButton).toHaveAttribute("aria-pressed", "true");
 
     // Other buttons should not be pressed
     await expect(
-      modeGroup.getByRole("button", { name: "自動定常" }),
+      modeGroup.getByRole("button", { name: "セーブ" }),
     ).toHaveAttribute("aria-pressed", "false");
     await expect(
-      modeGroup.getByRole("button", { name: "自動セーブ" }),
+      modeGroup.getByRole("button", { name: "暖房" }),
+    ).toHaveAttribute("aria-pressed", "false");
+    await expect(
+      modeGroup.getByRole("button", { name: "冷房" }),
     ).toHaveAttribute("aria-pressed", "false");
   });
 
-  test("can switch mode to 自動セーブ", async ({ page }) => {
+  test("can switch mode to セーブ", async ({ page }) => {
     const modeGroup = page.getByRole("group", { name: "動作モード" });
-    const saveButton = modeGroup.getByRole("button", { name: "自動セーブ" });
+    const saveButton = modeGroup.getByRole("button", { name: "セーブ" });
 
     await saveButton.click();
     await expect(saveButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("can switch mode to 暖房", async ({ page }) => {
+    const modeGroup = page.getByRole("group", { name: "動作モード" });
+    const heatButton = modeGroup.getByRole("button", { name: "暖房" });
+
+    await heatButton.click();
+    await expect(heatButton).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("can switch mode to 冷房", async ({ page }) => {
+    const modeGroup = page.getByRole("group", { name: "動作モード" });
+    const coolButton = modeGroup.getByRole("button", { name: "冷房" });
+
+    await coolButton.click();
+    await expect(coolButton).toHaveAttribute("aria-pressed", "true");
   });
 
   test("displays base temperature stepper", async ({ page }) => {
