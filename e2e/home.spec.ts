@@ -46,7 +46,7 @@ test.describe("Home page – settings", () => {
     const modeGroup = page.getByRole("group", { name: "動作モード" });
     await expect(modeGroup).toBeVisible();
 
-    await expect(modeGroup.getByRole("button", { name: "オフ" })).toBeVisible();
+    await expect(modeGroup.getByRole("button", { name: "停止" })).toBeVisible();
     await expect(modeGroup.getByRole("button", { name: "セーブ" })).toBeVisible();
     await expect(modeGroup.getByRole("button", { name: "暖房" })).toBeVisible();
     await expect(modeGroup.getByRole("button", { name: "冷房" })).toBeVisible();
@@ -59,9 +59,9 @@ test.describe("Home page – settings", () => {
     await expect(saveButton).toHaveAttribute("aria-pressed", "true");
   });
 
-  test("can switch mode to オフ", async ({ page }) => {
+  test("can switch mode to 停止", async ({ page }) => {
     const modeGroup = page.getByRole("group", { name: "動作モード" });
-    const offButton = modeGroup.getByRole("button", { name: "オフ" });
+    const offButton = modeGroup.getByRole("button", { name: "停止" });
 
     await offButton.click();
     await expect(offButton).toHaveAttribute("aria-pressed", "true");

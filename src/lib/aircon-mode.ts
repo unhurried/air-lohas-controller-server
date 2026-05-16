@@ -1,14 +1,14 @@
 import type { AirconMode } from "./aircon-types";
 
 export const MODE_OPTIONS: ReadonlyArray<{ value: AirconMode; label: string }> = [
-  { value: "-", label: "オフ" },
+  { value: "-", label: "停止" },
   { value: "auto-save", label: "セーブ" },
   { value: "heat", label: "暖房" },
   { value: "cool", label: "冷房" },
 ];
 
 const MODE_LABELS: Record<AirconMode, string> = {
-  "-": "オフ",
+  "-": "停止",
   "auto-save": "セーブ",
   heat: "暖房",
   cool: "冷房",
