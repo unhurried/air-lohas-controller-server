@@ -8,7 +8,7 @@ const SETTINGS_KEY = "aircon-settings-v1";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS = {
-  mode: "auto-steady",
+  mode: "auto-save",
   baseTemperature: 22,
   roomOffsets: {
     リビング: 0,
@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const ROOM_NAMES = Object.keys(DEFAULT_SETTINGS.roomOffsets);
+const LOG_PREFIX = "[reservation-cron]";
 
 function clampTemperature(value) {
   if (!Number.isFinite(value)) {
@@ -40,6 +41,22 @@ function clampOffset(value) {
   return Math.min(2, Math.max(-2, Math.trunc(value)));
 }
 
+function normalizeMode(value) {
+  if (value === "cool") {
+    return "cool";
+  }
+
+  if (value === "heat") {
+    return "heat";
+  }
+
+  if (value === "-") {
+    return "-";
+  }
+
+  return "auto-save";
+}
+
 function normalizeSettings(value) {
   const source = value ?? {};
 
@@ -49,7 +66,7 @@ function normalizeSettings(value) {
   }, { ...DEFAULT_SETTINGS.roomOffsets });
 
   return {
-    mode: source.mode === "auto-save" ? "auto-save" : "auto-steady",
+    mode: normalizeMode(source.mode),
     baseTemperature: clampTemperature(source.baseTemperature ?? 22),
     roomOffsets,
   };
@@ -144,18 +161,27 @@ function getJstDateTime(now) {
 }
 
 async function applyReservationsByCron(env) {
+  console.log(`${LOG_PREFIX} start`);
+
   const kv = env.AC_SETTINGS_KV;
   if (!kv) {
+    console.error(`${LOG_PREFIX} AC_SETTINGS_KV binding is missing`);
     return;
   }
 
   const raw = await kv.get(SETTINGS_KEY);
   if (!raw) {
+    console.log(`${LOG_PREFIX} settings not found`, { key: SETTINGS_KEY });
     return;
   }
 
   const state = normalizeState(JSON.parse(raw));
   const { date: today, time: nowTime } = getJstDateTime(new Date());
+  console.log(`${LOG_PREFIX} loaded state`, {
+    nowTime,
+    today,
+    reservationCount: state.reservations.length,
+  });
 
   const dueReservations = state.reservations.filter(
     (reservation) =>
@@ -163,8 +189,12 @@ async function applyReservationsByCron(env) {
       reservation.time <= nowTime &&
       reservation.lastAppliedDate !== today,
   );
+  console.log(`${LOG_PREFIX} filtered due reservations`, {
+    dueCount: dueReservations.length,
+  });
 
   if (dueReservations.length === 0) {
+    console.log(`${LOG_PREFIX} no due reservations`);
     return;
   }
 
@@ -193,12 +223,22 @@ async function applyReservationsByCron(env) {
       reservations: nextReservations,
     }),
   );
+  console.log(`${LOG_PREFIX} applied reservation`, {
+    appliedReservationId: latest.id,
+    appliedReservationTime: latest.time,
+    markedCount: dueReservations.length,
+  });
 }
 
 const worker = {
   fetch: openNextWorker.fetch,
   async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(applyReservationsByCron(env));
+    ctx.waitUntil(
+      applyReservationsByCron(env).catch((error) => {
+        console.error(`${LOG_PREFIX} scheduled execution failed`, error);
+        throw error;
+      }),
+    );
   },
 };
 

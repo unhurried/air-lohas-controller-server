@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ROOM_NAMES,
   type AirconReservation,
@@ -14,16 +14,22 @@ import { BaseTemperatureStepper } from "@/components/aircon/base-temperature-ste
 import { RoomOffsetGrid } from "@/components/aircon/room-offset-grid";
 
 type ReservationsFormProps = {
-  initialDraftSettings: AirconSettings;
+  currentSettings: AirconSettings;
   initialReservations: AirconReservation[];
   addReservation: (formData: FormData) => Promise<void>;
+  updateReservation: (formData: FormData) => Promise<void>;
   toggleReservation: (formData: FormData) => Promise<void>;
   deleteReservation: (formData: FormData) => Promise<void>;
 };
 
-function toReservationFormData(settings: AirconSettings, reservationTime: string): FormData {
+function toUpdateFormData(
+  reservationId: string,
+  settings: AirconSettings,
+  time: string,
+): FormData {
   const formData = new FormData();
-  formData.set("reservationTime", reservationTime);
+  formData.set("reservationId", reservationId);
+  formData.set("reservationTime", time);
   formData.set("mode", settings.mode);
   formData.set("baseTemperature", String(settings.baseTemperature));
 
@@ -35,43 +41,105 @@ function toReservationFormData(settings: AirconSettings, reservationTime: string
 }
 
 export function ReservationsForm({
-  initialDraftSettings,
+  currentSettings,
   initialReservations,
   addReservation,
+  updateReservation,
   toggleReservation,
   deleteReservation,
 }: ReservationsFormProps) {
-  const [draftSettings, setDraftSettings] = useState(initialDraftSettings);
   const [reservationTime, setReservationTime] = useState("07:00");
   const [reservations, setReservations] = useState(initialReservations);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [prevInitialReservations, setPrevInitialReservations] = useState(initialReservations);
 
-  useEffect(() => {
-    setDraftSettings(initialDraftSettings);
-  }, [initialDraftSettings]);
-
-  useEffect(() => {
+  if (prevInitialReservations !== initialReservations) {
+    setPrevInitialReservations(initialReservations);
     setReservations(initialReservations);
-  }, [initialReservations]);
+  }
 
-  const updateMode = (mode: AirconSettings["mode"]) => {
-    setDraftSettings((previous) => ({ ...previous, mode }));
+  const toggleExpand = (reservationId: string) => {
+    if (expandedId === reservationId) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(reservationId);
+    }
   };
 
-  const updateBaseTemperature = (baseTemperature: number) => {
-    setDraftSettings((previous) => ({
-      ...previous,
-      baseTemperature: clampTemperature(baseTemperature),
+  const persistReservation = (nextReservation: AirconReservation) => {
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(nextReservation.time)) {
+      return;
+    }
+
+    startTransition(() => {
+      void updateReservation(
+        toUpdateFormData(
+          nextReservation.id,
+          nextReservation.settings,
+          nextReservation.time,
+        ),
+      );
+    });
+  };
+
+  const updateEditedReservation = (
+    reservationId: string,
+    updater: (reservation: AirconReservation) => AirconReservation,
+  ) => {
+    const currentReservation = reservations.find(
+      (reservation) => reservation.id === reservationId,
+    );
+
+    if (!currentReservation) {
+      return;
+    }
+
+    const nextReservation = updater(currentReservation);
+
+    setReservations((previous) =>
+      previous.map((reservation) =>
+        reservation.id === reservationId ? nextReservation : reservation,
+      ),
+    );
+
+    persistReservation(nextReservation);
+  };
+
+  const updateEditMode = (reservationId: string, mode: AirconSettings["mode"]) => {
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: { ...reservation.settings, mode },
     }));
   };
 
-  const updateRoomOffset = (room: RoomName, offset: number) => {
-    setDraftSettings((previous) => ({
-      ...previous,
-      roomOffsets: {
-        ...previous.roomOffsets,
-        [room]: clampOffset(offset),
+  const updateEditBaseTemperature = (reservationId: string, baseTemperature: number) => {
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: {
+        ...reservation.settings,
+        baseTemperature: clampTemperature(baseTemperature),
       },
+    }));
+  };
+
+  const updateEditRoomOffset = (reservationId: string, room: RoomName, offset: number) => {
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      settings: {
+        ...reservation.settings,
+        roomOffsets: {
+          ...reservation.settings.roomOffsets,
+          [room]: clampOffset(offset),
+        },
+      },
+    }));
+  };
+
+  const updateEditTime = (reservationId: string, time: string) => {
+    updateEditedReservation(reservationId, (reservation) => ({
+      ...reservation,
+      time,
     }));
   };
 
@@ -84,15 +152,18 @@ export function ReservationsForm({
       id: `local-${Date.now()}`,
       time: reservationTime,
       enabled: true,
-      settings: draftSettings,
+      settings: currentSettings,
     };
 
     setReservations((previous) =>
       [...previous, optimisticReservation].sort((a, b) => a.time.localeCompare(b.time)),
     );
 
+    const formData = new FormData();
+    formData.set("reservationTime", reservationTime);
+
     startTransition(() => {
-      void addReservation(toReservationFormData(draftSettings, reservationTime));
+      void addReservation(formData);
     });
   };
 
@@ -117,6 +188,10 @@ export function ReservationsForm({
       previous.filter((reservation) => reservation.id !== reservationId),
     );
 
+    if (expandedId === reservationId) {
+      setExpandedId(null);
+    }
+
     const formData = new FormData();
     formData.set("reservationId", reservationId);
 
@@ -125,68 +200,60 @@ export function ReservationsForm({
     });
   };
 
+  const sortedReservations = [...reservations].sort((a, b) =>
+    a.time.localeCompare(b.time),
+  );
+
   return (
     <div className="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
-        <ModeButtonGroup
-          label="予約時の動作モード"
-          ariaLabel="予約時の動作モード"
-          value={draftSettings.mode}
-          onChange={updateMode}
-        />
-
-        <BaseTemperatureStepper
-          label="予約時の基準温度"
-          value={draftSettings.baseTemperature}
-          min={16}
-          max={30}
-          onChange={updateBaseTemperature}
-        />
-      </div>
-
-      <RoomOffsetGrid
-        title="予約時の各部屋温度補正（基準温度比）"
-        offsets={draftSettings.roomOffsets}
-        onChange={updateRoomOffset}
-      />
-
-      <div className="space-y-2.5 border-t border-zinc-200 pt-3 sm:space-y-3 sm:pt-4 dark:border-zinc-800">
-        <h2 className="text-sm font-semibold">予約一覧</h2>
+      <div className="space-y-2.5 sm:space-y-3">
         <div className="flex flex-wrap items-end gap-2">
-          <label className="space-y-1">
-            <span className="text-sm">時刻</span>
-            <input
-              type="time"
-              step={60}
-              value={reservationTime}
-              onChange={(event) => setReservationTime(event.target.value)}
-              className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
-            />
-          </label>
+          <input
+            type="time"
+            step={60}
+            aria-label="時刻"
+            value={reservationTime}
+            onChange={(event) => setReservationTime(event.target.value)}
+            className="rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+          />
           <button
             type="button"
             onClick={createReservation}
             className="rounded-md border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
           >
-            この設定で予約追加
+            予約追加
           </button>
         </div>
 
         <div className="space-y-1.5 sm:space-y-2">
-          {reservations.length === 0 && (
+          {sortedReservations.length === 0 && (
             <p className="text-sm text-zinc-500 dark:text-zinc-400">予約はありません。</p>
           )}
 
-          {[...reservations]
-            .sort((a, b) => a.time.localeCompare(b.time))
-            .map((reservation) => (
+          {sortedReservations.map((reservation) => {
+            const isExpanded = expandedId === reservation.id;
+
+            return (
               <div
                 key={reservation.id}
-                className="rounded-md border border-zinc-200 p-2.5 text-sm sm:p-3 dark:border-zinc-800"
+                className="rounded-md border border-zinc-200 text-sm dark:border-zinc-800"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="font-medium">{reservation.time}</div>
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 sm:p-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleExpand(reservation.id)}
+                    className="flex items-center gap-1.5 font-medium"
+                    aria-expanded={isExpanded}
+                  >
+                    <span className="text-xs">{isExpanded ? "▼" : "▶"}</span>
+                    {reservation.time}
+                  </button>
                   <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {getModeLabel(reservation.settings.mode)}
+                      {" / "}
+                      基準 {reservation.settings.baseTemperature}℃
+                    </span>
                     <label className="inline-flex items-center gap-1">
                       <input
                         type="checkbox"
@@ -206,28 +273,55 @@ export function ReservationsForm({
                     </button>
                   </div>
                 </div>
-                <p className="mt-1.5 text-xs text-zinc-600 sm:mt-2 dark:text-zinc-300">
-                  {getModeLabel(reservation.settings.mode)}
-                  {" / "}
-                  基準 {reservation.settings.baseTemperature}℃
-                </p>
-                <div className="mt-1.5 grid gap-0.5 sm:mt-2 sm:gap-1 sm:grid-cols-2">
-                  {ROOM_NAMES.map((room) => {
-                    const offset = reservation.settings.roomOffsets[room];
-                    const roomTemperature = reservation.settings.baseTemperature + offset;
 
-                    return (
-                      <p
-                        key={`${reservation.id}-${room}`}
-                        className="text-xs text-zinc-600 dark:text-zinc-300"
-                      >
-                        {room}: {roomTemperature}℃ ({offset > 0 ? `+${offset}` : offset})
-                      </p>
-                    );
-                  })}
-                </div>
+                {isExpanded && (
+                  <div className="border-t border-zinc-200 p-2.5 sm:p-3 dark:border-zinc-800">
+                    <div className="space-y-3 sm:space-y-4">
+                      <label className="block space-y-1">
+                        <span className="text-sm font-medium">予約時刻</span>
+                        <input
+                          type="time"
+                          step={60}
+                          value={reservation.time}
+                          onChange={(event) =>
+                            updateEditTime(reservation.id, event.target.value)
+                          }
+                          className="block rounded-md border border-zinc-300 bg-transparent px-3 py-2 text-sm outline-none focus:border-zinc-500 dark:border-zinc-700"
+                        />
+                      </label>
+
+                      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
+                        <ModeButtonGroup
+                          label="動作モード"
+                          ariaLabel="動作モード"
+                          value={reservation.settings.mode}
+                          onChange={(mode) => updateEditMode(reservation.id, mode)}
+                        />
+
+                        <BaseTemperatureStepper
+                          label="基準温度"
+                          value={reservation.settings.baseTemperature}
+                          min={16}
+                          max={30}
+                          onChange={(temp) =>
+                            updateEditBaseTemperature(reservation.id, temp)
+                          }
+                        />
+                      </div>
+
+                      <RoomOffsetGrid
+                        title="各部屋温度補正（基準温度比）"
+                        offsets={reservation.settings.roomOffsets}
+                        onChange={(room, offset) =>
+                          updateEditRoomOffset(reservation.id, room, offset)
+                        }
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            );
+          })}
         </div>
       </div>
 

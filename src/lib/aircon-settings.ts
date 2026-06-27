@@ -13,7 +13,7 @@ const SETTINGS_KEY = "aircon-settings-v1";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS: AirconSettings = {
-  mode: "auto-steady",
+  mode: "auto-save",
   baseTemperature: 22,
   roomOffsets: {
     リビング: 0,

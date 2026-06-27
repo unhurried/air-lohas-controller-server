@@ -6,6 +6,9 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	"observability": {
+		"enabled": true
+	},
 	"triggers": {
 		"crons": [
 			"* * * * *"
@@ -17,11 +20,11 @@
 	},
 	"env": {
 		"stg": {
-			"name": "ac-stg",
+			"name": "ac-stg1",
 			"kv_namespaces": [
 				{
 					"binding": "AC_SETTINGS_KV",
-					"id": "your-kv-id",
+					"id": "d5fbebe844d24aa9896ef9dbaafff68c",
 					"remote": true
 				}
 			]
@@ -31,7 +34,7 @@
 			"kv_namespaces": [
 				{
 					"binding": "AC_SETTINGS_KV",
-					"id": "your-kv-id",
+					"id": "02eed31c81ec4feb84b6fba8cc3a3352",
 				}
 			]
 		}

@@ -12,7 +12,7 @@ test.describe("Reservations page", () => {
     }
 
     // Reset time input to default
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
     if (await timeInput.isVisible()) {
       await timeInput.fill("08:00");
       await page.waitForTimeout(100);
@@ -26,55 +26,24 @@ test.describe("Reservations page", () => {
     ).toBeVisible();
   });
 
-  test("shows mode button group for reservations", async ({ page }) => {
-    const modeGroup = page.getByRole("group", {
-      name: "予約時の動作モード",
-    });
-    await expect(modeGroup).toBeVisible();
-    await expect(modeGroup.getByRole("button", { name: "電源オフ" })).toBeVisible();
-    await expect(modeGroup.getByRole("button", { name: "自動定常" })).toBeVisible();
-    await expect(modeGroup.getByRole("button", { name: "自動セーブ" })).toBeVisible();
-  });
-
-  test("shows base temperature stepper for reservations", async ({
-    page,
-  }) => {
-    await expect(page.getByText("予約時の基準温度")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "基準温度を上げる" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "基準温度を下げる" }),
-    ).toBeVisible();
-  });
-
-  test("shows room offset grid for reservations", async ({ page }) => {
-    await expect(
-      page.getByText("予約時の各部屋温度補正（基準温度比）"),
-    ).toBeVisible();
-
-    const sliders = page.locator('input[type="range"]');
-    await expect(sliders).toHaveCount(8);
-  });
-
   test("shows reservation list section", async ({ page }) => {
-    await expect(page.getByText("予約一覧")).toBeVisible();
+    await expect(page.getByRole("button", { name: "予約追加" })).toBeVisible();
   });
 
   test("shows time input and add button", async ({ page }) => {
-    await expect(page.locator('input[type="time"]')).toBeVisible();
+    await expect(page.locator('input[type="time"]').first()).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "この設定で予約追加" }),
+      page.getByRole("button", { name: "予約追加" }),
     ).toBeVisible();
   });
 
   test("can add a reservation", async ({ page }) => {
     // Set a specific time
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("08:30");
 
     // Click add button
-    await page.getByRole("button", { name: "この設定で予約追加" }).click();
+    await page.getByRole("button", { name: "予約追加" }).click();
     await page.waitForTimeout(300);
 
     // The reservation should appear in the list
@@ -87,10 +56,10 @@ test.describe("Reservations page", () => {
 
   test("can toggle a reservation", async ({ page }) => {
     // Add a reservation first (beforeEach cleans up)
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("09:00");
     await page
-      .getByRole("button", { name: "この設定で予約追加" })
+      .getByRole("button", { name: "予約追加" })
       .click();
     await page.waitForTimeout(300);
     await expect(page.getByText("09:00")).toBeVisible();
@@ -111,10 +80,10 @@ test.describe("Reservations page", () => {
   test("can delete a reservation", async ({ page }) => {
     // beforeEach cleans up existing reservations
     // Add a reservation first
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("10:00");
     await page
-      .getByRole("button", { name: "この設定で予約追加" })
+      .getByRole("button", { name: "予約追加" })
       .click();
     await page.waitForTimeout(300);
     await expect(page.getByText("10:00")).toBeVisible();
@@ -135,41 +104,40 @@ test.describe("Reservations page", () => {
 
   test("can add multiple reservations sorted by time", async ({ page }) => {
     // beforeEach has already cleaned up
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
 
     // Add reservation at 22:00
     await timeInput.fill("22:00");
-    await page.getByRole("button", { name: "この設定で予約追加" }).click();
+    await page.getByRole("button", { name: "予約追加" }).click();
     await page.waitForTimeout(300);
     await expect(page.getByText("22:00")).toBeVisible();
 
     // Add reservation at 06:00
     await timeInput.fill("06:00");
-    await page.getByRole("button", { name: "この設定で予約追加" }).click();
+    await page.getByRole("button", { name: "予約追加" }).click();
     await page.waitForTimeout(300);
     await expect(page.getByText("06:00")).toBeVisible();
 
     // Both should be visible and sorted
-    const times = page.locator(".font-medium");
-    const texts = await times.allTextContents();
-    const timeTexts = texts.filter(
-      (t) => /^\d{2}:\d{2}$/.test(t),
-    );
+    const timeButtons = page.locator("button[aria-expanded]");
+    const texts = await timeButtons.allTextContents();
+    const timeTexts = texts
+      .map((t) => t.replace(/[▼▶]\s*/, "").trim())
+      .filter((t) => /^\d{2}:\d{2}$/.test(t));
     expect(timeTexts).toEqual([...timeTexts].sort());
   });
 
   test("reservation shows mode and temperature details", async ({ page }) => {
     // beforeEach cleaned up
-    const timeInput = page.locator('input[type="time"]');
+    const timeInput = page.locator('input[type="time"]').first();
     await timeInput.fill("12:00");
     await page
-      .getByRole("button", { name: "この設定で予約追加" })
+      .getByRole("button", { name: "予約追加" })
       .click();
     await page.waitForTimeout(300);
     await expect(page.getByText("12:00")).toBeVisible();
 
-    // Each reservation should show mode label and temperature
-    // Check that mode/temperature line exists
+    // Each reservation should show mode label and temperature in the header
     await expect(page.getByText(/基準 \d+℃/).first()).toBeVisible();
   });
 
@@ -179,25 +147,84 @@ test.describe("Reservations page", () => {
     await expect(page.locator("h1")).toContainText("Air LOHAS 設定");
   });
 
-  test("can change draft mode before adding reservation", async ({
-    page,
-  }) => {
-    // beforeEach has already cleaned up
-    const modeGroup = page.getByRole("group", {
-      name: "予約時の動作モード",
-    });
-    const offButton = modeGroup.getByRole("button", { name: "電源オフ" });
+  test("can expand a reservation to see edit controls", async ({ page }) => {
+    // Add a reservation
+    const timeInput = page.locator('input[type="time"]').first();
+    await timeInput.fill("14:00");
+    await page.getByRole("button", { name: "予約追加" }).click();
+    await page.waitForTimeout(300);
+    await expect(page.getByText("14:00")).toBeVisible();
 
-    await offButton.click();
-    await expect(offButton).toHaveAttribute("aria-pressed", "true");
+    // Click the time to expand
+    const expandButton = page.getByRole("button", { name: /14:00/ });
+    await expandButton.click();
 
-    // Add reservation with "-" (off) mode
-    const timeInput = page.locator('input[type="time"]');
-    await timeInput.fill("23:00");
-    await page.getByRole("button", { name: "この設定で予約追加" }).click();
+    // Should show edit controls
+    await expect(page.getByText("予約時刻")).toBeVisible();
+    const modeGroup = page.getByRole("group", { name: "動作モード" });
+    await expect(modeGroup).toBeVisible();
+    await expect(page.getByRole("button", { name: "基準温度を上げる" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "基準温度を下げる" })).toBeVisible();
+    await expect(page.getByText("各部屋温度補正（基準温度比）")).toBeVisible();
+
+    // Room offset sliders should be visible
+    const sliders = page.locator('input[type="range"]');
+    await expect(sliders).toHaveCount(8);
+  });
+
+  test("can edit a reservation's mode immediately", async ({ page }) => {
+    // Add a reservation
+    const timeInput = page.locator('input[type="time"]').first();
+    await timeInput.fill("15:00");
+    await page.getByRole("button", { name: "予約追加" }).click();
+    await page.waitForTimeout(300);
+    await expect(page.getByText("15:00")).toBeVisible();
+
+    // Expand the reservation
+    await page.getByRole("button", { name: /15:00/ }).click();
+
+    // Change mode to "停止"
+    const modeGroup = page.getByRole("group", { name: "動作モード" });
+    await modeGroup.getByRole("button", { name: "停止" }).click();
+    await expect(
+      modeGroup.getByRole("button", { name: "停止" }),
+    ).toHaveAttribute("aria-pressed", "true");
     await page.waitForTimeout(300);
 
-    // The reservation should show "電源オフ" in its details
-    await expect(page.getByText("電源オフ").last()).toBeVisible();
+    // The reservation header should now show "停止"
+    await expect(page.getByText("停止").first()).toBeVisible();
+  });
+
+  test("can edit a reservation time immediately", async ({ page }) => {
+    // Add a reservation
+    const timeInput = page.locator('input[type="time"]').first();
+    await timeInput.fill("16:00");
+    await page.getByRole("button", { name: "予約追加" }).click();
+    await page.waitForTimeout(300);
+    await expect(page.getByText("16:00")).toBeVisible();
+
+    // Expand
+    await page.getByRole("button", { name: /16:00/ }).click();
+    await page.locator('input[type="time"]').nth(1).fill("16:30");
+    await page.waitForTimeout(300);
+
+    await expect(page.getByRole("button", { name: /16:30/ })).toBeVisible();
+  });
+
+  test("can collapse an expanded reservation by clicking time again", async ({ page }) => {
+    // Add a reservation
+    const timeInput = page.locator('input[type="time"]').first();
+    await timeInput.fill("17:00");
+    await page.getByRole("button", { name: "予約追加" }).click();
+    await page.waitForTimeout(300);
+
+    // Expand
+    const expandButton = page.getByRole("button", { name: /17:00/ });
+    await expandButton.click();
+    await expect(page.getByText("予約時刻")).toBeVisible();
+
+    // Collapse by clicking time again
+    await expandButton.click();
+    await expect(page.getByText("予約時刻")).not.toBeVisible();
   });
 });

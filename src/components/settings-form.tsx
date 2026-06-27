@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ROOM_NAMES,
   type AirconSettings,
@@ -34,10 +34,12 @@ export function SettingsForm({
 }: SettingsFormProps) {
   const [settings, setSettings] = useState(initialSettings);
   const [isPending, startTransition] = useTransition();
+  const [prevInitialSettings, setPrevInitialSettings] = useState(initialSettings);
 
-  useEffect(() => {
+  if (prevInitialSettings !== initialSettings) {
+    setPrevInitialSettings(initialSettings);
     setSettings(initialSettings);
-  }, [initialSettings]);
+  }
 
   const saveSettings = (nextSettings: AirconSettings) => {
     startTransition(() => {
