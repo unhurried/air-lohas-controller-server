@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   ROOM_NAMES,
   type AirconReservation,
@@ -52,10 +52,12 @@ export function ReservationsForm({
   const [reservations, setReservations] = useState(initialReservations);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [prevInitialReservations, setPrevInitialReservations] = useState(initialReservations);
 
-  useEffect(() => {
+  if (prevInitialReservations !== initialReservations) {
+    setPrevInitialReservations(initialReservations);
     setReservations(initialReservations);
-  }, [initialReservations]);
+  }
 
   const toggleExpand = (reservationId: string) => {
     if (expandedId === reservationId) {
