@@ -161,27 +161,20 @@ function getJstDateTime(now) {
 }
 
 async function applyReservationsByCron(env) {
-  console.log(`${LOG_PREFIX} start`);
-
   const kv = env.AC_SETTINGS_KV;
   if (!kv) {
-    console.error(`${LOG_PREFIX} AC_SETTINGS_KV binding is missing`);
+    console.error(`${LOG_PREFIX} skipped: AC_SETTINGS_KV binding is missing`);
     return;
   }
 
   const raw = await kv.get(SETTINGS_KEY);
   if (!raw) {
-    console.log(`${LOG_PREFIX} settings not found`, { key: SETTINGS_KEY });
+    console.log(`${LOG_PREFIX} skipped: settings not found (key=${SETTINGS_KEY})`);
     return;
   }
 
   const state = normalizeState(JSON.parse(raw));
   const { date: today, time: nowTime } = getJstDateTime(new Date());
-  console.log(`${LOG_PREFIX} loaded state`, {
-    nowTime,
-    today,
-    reservationCount: state.reservations.length,
-  });
 
   const dueReservations = state.reservations.filter(
     (reservation) =>
@@ -189,12 +182,9 @@ async function applyReservationsByCron(env) {
       reservation.time <= nowTime &&
       reservation.lastAppliedDate !== today,
   );
-  console.log(`${LOG_PREFIX} filtered due reservations`, {
-    dueCount: dueReservations.length,
-  });
 
   if (dueReservations.length === 0) {
-    console.log(`${LOG_PREFIX} no due reservations`);
+    console.log(`${LOG_PREFIX} skipped: no due reservations (now=${today} ${nowTime})`);
     return;
   }
 
@@ -223,11 +213,9 @@ async function applyReservationsByCron(env) {
       reservations: nextReservations,
     }),
   );
-  console.log(`${LOG_PREFIX} applied reservation`, {
-    appliedReservationId: latest.id,
-    appliedReservationTime: latest.time,
-    markedCount: dueReservations.length,
-  });
+  console.log(
+    `${LOG_PREFIX} applied: reservationId=${latest.id} time=${latest.time} mode=${latest.settings.mode} baseTemperature=${latest.settings.baseTemperature} markedCount=${dueReservations.length}`,
+  );
 }
 
 const worker = {
@@ -235,7 +223,7 @@ const worker = {
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(
       applyReservationsByCron(env).catch((error) => {
-        console.error(`${LOG_PREFIX} scheduled execution failed`, error);
+        console.error(`${LOG_PREFIX} failed: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
       }),
     );
