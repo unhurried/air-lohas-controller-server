@@ -3,8 +3,11 @@ import openNextWorker, {
   DOQueueHandler,
   DOShardedTagCache,
 } from "./.open-next/worker.js";
+import { DurableObject } from "cloudflare:workers";
 
-const SETTINGS_KEY = "aircon-settings-v1";
+const STORAGE_KEY = "aircon-state";
+const DO_ID_NAME = "singleton";
+
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS = {
@@ -160,20 +163,44 @@ function getJstDateTime(now) {
   return { date, time };
 }
 
+/**
+ * Durable Object class for aircon settings storage.
+ * Provides strong consistency and eliminates update conflicts.
+ */
+export class AcSettingsDO extends DurableObject {
+  async getState() {
+    const state = await this.ctx.storage.get(STORAGE_KEY);
+    if (!state) {
+      return {
+        currentSettings: {
+          ...DEFAULT_SETTINGS,
+          updatedAt: DEFAULT_UPDATED_AT,
+        },
+        reservations: [],
+      };
+    }
+    return normalizeState(state);
+  }
+
+  async setState(newState) {
+    const normalized = normalizeState(newState);
+    await this.ctx.storage.put(STORAGE_KEY, normalized);
+    return normalized;
+  }
+}
+
 async function applyReservationsByCron(env) {
-  const kv = env.AC_SETTINGS_KV;
-  if (!kv) {
-    console.error(`${LOG_PREFIX} skipped: AC_SETTINGS_KV binding is missing`);
+  const doNamespace = env.AC_SETTINGS_DO;
+  if (!doNamespace) {
+    console.error(`${LOG_PREFIX} skipped: AC_SETTINGS_DO binding is missing`);
     return;
   }
 
-  const raw = await kv.get(SETTINGS_KEY);
-  if (!raw) {
-    console.log(`${LOG_PREFIX} skipped: settings not found (key=${SETTINGS_KEY})`);
-    return;
-  }
+  const id = doNamespace.idFromName(DO_ID_NAME);
+  const stub = doNamespace.get(id);
 
-  const state = normalizeState(JSON.parse(raw));
+  const state = await stub.getState();
+
   const { date: today, time: nowTime } = getJstDateTime(new Date());
 
   const dueReservations = state.reservations.filter(
@@ -203,16 +230,13 @@ async function applyReservationsByCron(env) {
     return reservation;
   });
 
-  await kv.put(
-    SETTINGS_KEY,
-    JSON.stringify({
-      currentSettings: {
-        ...latest.settings,
-        updatedAt: new Date().toISOString(),
-      },
-      reservations: nextReservations,
-    }),
-  );
+  await stub.setState({
+    currentSettings: {
+      ...latest.settings,
+      updatedAt: new Date().toISOString(),
+    },
+    reservations: nextReservations,
+  });
   console.log(
     `${LOG_PREFIX} applied: reservationId=${latest.id} time=${latest.time} mode=${latest.settings.mode} baseTemperature=${latest.settings.baseTemperature} markedCount=${dueReservations.length}`,
   );

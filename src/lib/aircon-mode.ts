@@ -19,7 +19,7 @@ export function getModeLabel(mode: AirconMode): string {
   return MODE_LABELS[mode];
 }
 
-/** Normalize a mode value from any source (KV, form data, etc.) to an {@link AirconMode}. */
+/** Normalize a mode value from any source (DO storage, form data, etc.) to an {@link AirconMode}. */
 export function normalizeMode(value: unknown): AirconMode {
   if (value === "cool") return "cool";
   if (value === "heat") return "heat";

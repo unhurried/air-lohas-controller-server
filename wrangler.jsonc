@@ -18,25 +18,26 @@
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
 	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "AC_SETTINGS_DO",
+				"class_name": "AcSettingsDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["AcSettingsDO"]
+		}
+	],
 	"env": {
 		"stg": {
-			"name": "ac-stg1",
-			"kv_namespaces": [
-				{
-					"binding": "AC_SETTINGS_KV",
-					"id": "d5fbebe844d24aa9896ef9dbaafff68c",
-					"remote": true
-				}
-			]
+			"name": "ac-stg1"
 		},
 		"prod": {
-			"name": "ac",
-			"kv_namespaces": [
-				{
-					"binding": "AC_SETTINGS_KV",
-					"id": "02eed31c81ec4feb84b6fba8cc3a3352",
-				}
-			]
+			"name": "ac"
 		}
 	}
 }

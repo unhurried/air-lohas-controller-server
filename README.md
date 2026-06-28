@@ -1,8 +1,8 @@
 # air-lohas-controller-server
 
-パナソニックホームズの全館空調システム「エアロハス」の制御プログラム。温度設定をCloudflare Workers KVに書き込むWebアプリケーション。
+パナソニックホームズの全館空調システム「エアロハス」の制御プログラム。温度設定をCloudflare Durable Objectsに書き込むWebアプリケーション。
 
-Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client](https://github.com/unhurried/air-lohas-controller-client)によって読み込まれ、エアロハス本体と通信して制御を行う。
+Cloudflare Durable Objectsに書き込まれた設定は[air-lohas-controller-client](https://github.com/unhurried/air-lohas-controller-client)によって読み込まれ、エアロハス本体と通信して制御を行う。
 
 ## 開発手順
 
@@ -50,20 +50,6 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
   wrangler login
   ```
 
-* Cloudflare Workers KVを環境ごとに作成する。
-
-  ```bash
-  # ステージング環境用
-  npx wrangler kv namespace create AC_SETTINGS --env stg
-
-  # 本番環境用
-  npx wrangler kv namespace create AC_SETTINGS --env prod
-  ```
-
-  * 出力された namespace ID をそれぞれ `wrangler.jsonc` の対応する環境の `kv_namespaces[0].id` に設定する。
-    * stg: `env.stg.kv_namespaces[0].id`
-    * prod: `env.prod.kv_namespaces[0].id`
-
 * 鍵を環境ごとに Secrets に登録する。
 
   ```bash
@@ -84,19 +70,21 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
   npm run cf:deploy:prod
   ```
 
+  * Durable Objects はデプロイ時に自動的に作成されるため、手動でのリソース作成は不要。
+
 ## アーキテクチャ
 
 ### 技術スタック
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **Cloudflare Workers** + **Workers KV** (OpenNext経由でデプロイ)
+- **Cloudflare Workers** + **Durable Objects** (OpenNext経由でデプロイ)
 - **Tailwind CSS v4**
 - ユニットテストフレームワークは未導入。E2Eテストのみ（Playwright）
 
 ### データフロー
 
 ```
-ブラウザ → Server Actions → Cloudflare Workers KV ← air-lohas-controller-client → エアコン実機
+ブラウザ → Server Actions → Cloudflare Durable Objects ← air-lohas-controller-client → エアコン実機
                                      ↑
                             Cronジョブ（毎分）が予約を適用
 ```
@@ -109,12 +97,12 @@ Cloudflare Workers KVに書き込まれた設定は[air-lohas-controller-client]
 ### 主要モジュール
 
 - `src/middleware.ts` — アクセス制御（`ACCESS_SECRET`クエリパラメータまたはCookieで認証、8時間TTL）
-- `src/lib/aircon-settings.ts` — KVの読み書き・バリデーション・正規化。KV未接続時はインメモリフォールバック
+- `src/lib/aircon-settings.ts` — Durable Objectsの読み書き・バリデーション・正規化。DO未接続時はインメモリフォールバック
 - `src/lib/aircon-mode.ts` — 運転モードのヘルパー（ラベル取得・正規化）
 - `src/lib/aircon-types.ts` — 型定義
-- `worker.mjs` — Cloudflare Workerエントリポイント（fetch + cronスケジュールハンドラ）
+- `worker.mjs` — Cloudflare Workerエントリポイント（fetch + cronスケジュールハンドラ + Durable Objectクラス定義）
 
-### KVデータ構造
+### データ構造（Durable Objects Storage）
 
 ```typescript
 {

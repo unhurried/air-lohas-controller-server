@@ -9,7 +9,7 @@ import {
 } from "./aircon-types";
 import { normalizeMode, parseMode } from "./aircon-mode";
 
-const SETTINGS_KEY = "aircon-settings-v1";
+const DO_ID_NAME = "singleton";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS: AirconSettings = {
@@ -169,10 +169,13 @@ function normalizeState(value: unknown): AirconState {
   };
 }
 
-function getKvBinding(): KVNamespace | undefined {
+function getDoStub() {
   try {
     const context = getCloudflareContext();
-    return context.env.AC_SETTINGS_KV;
+    const doNamespace = context.env.AC_SETTINGS_DO;
+    if (!doNamespace) return undefined;
+    const id = doNamespace.idFromName(DO_ID_NAME);
+    return doNamespace.get(id);
   } catch {
     return undefined;
   }
@@ -189,26 +192,11 @@ export async function getReservations(): Promise<AirconReservation[]> {
 }
 
 export async function getAppState(): Promise<AirconState> {
-  const kv = getKvBinding();
+  const stub = getDoStub();
 
-  if (kv) {
-    const raw = await kv.get(SETTINGS_KEY);
-    if (!raw) {
-      return {
-        currentSettings: structuredClone(DEFAULT_CURRENT_SETTINGS),
-        reservations: [],
-      };
-    }
-
-    try {
-      const parsed = JSON.parse(raw);
-      return normalizeState(parsed);
-    } catch {
-      return {
-        currentSettings: structuredClone(DEFAULT_CURRENT_SETTINGS),
-        reservations: [],
-      };
-    }
+  if (stub) {
+    const state = await stub.getState();
+    return normalizeState(state);
   }
 
   const localState: AirconState = {
@@ -230,10 +218,10 @@ export async function saveSettings(nextSettings: AirconSettings): Promise<void> 
     currentSettings: nextCurrentSettings,
     reservations: currentState.reservations,
   };
-  const kv = getKvBinding();
+  const stub = getDoStub();
 
-  if (kv) {
-    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
+  if (stub) {
+    await stub.setState(nextState);
     return;
   }
 
@@ -251,10 +239,10 @@ export async function saveReservations(nextReservations: AirconReservation[]): P
     reservations: normalizedReservations,
   };
 
-  const kv = getKvBinding();
+  const stub = getDoStub();
 
-  if (kv) {
-    await kv.put(SETTINGS_KEY, JSON.stringify(nextState));
+  if (stub) {
+    await stub.setState(nextState);
     return;
   }
 
