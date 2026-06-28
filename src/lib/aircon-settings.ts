@@ -195,8 +195,15 @@ export async function getAppState(): Promise<AirconState> {
   const stub = getDoStub();
 
   if (stub) {
-    const state = await stub.getState();
-    return normalizeState(state);
+    try {
+      const state = await stub.getState();
+      return normalizeState(state);
+    } catch {
+      return {
+        currentSettings: structuredClone(DEFAULT_CURRENT_SETTINGS),
+        reservations: [],
+      };
+    }
   }
 
   const localState: AirconState = {
