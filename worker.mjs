@@ -23,7 +23,21 @@ const DEFAULT_SETTINGS = {
 };
 
 const ROOM_NAMES = Object.keys(DEFAULT_SETTINGS.roomOffsets);
-const LOG_PREFIX = "[reservation-cron]";
+
+function logCron(level, message, context = {}) {
+  const line = JSON.stringify({
+    type: "cron",
+    level,
+    message,
+    ...context,
+  });
+
+  if (level === "error") {
+    console.error(line);
+  } else {
+    console.log(line);
+  }
+}
 
 function clampTemperature(value) {
   if (!Number.isFinite(value)) {
@@ -163,13 +177,13 @@ function getJstDateTime(now) {
 async function applyReservationsByCron(env) {
   const kv = env.AC_SETTINGS_KV;
   if (!kv) {
-    console.error(`${LOG_PREFIX} skipped: AC_SETTINGS_KV binding is missing`);
+    logCron("error", "skipped: AC_SETTINGS_KV binding is missing");
     return;
   }
 
   const raw = await kv.get(SETTINGS_KEY);
   if (!raw) {
-    console.log(`${LOG_PREFIX} skipped: settings not found (key=${SETTINGS_KEY})`);
+    logCron("info", "skipped: settings not found", { key: SETTINGS_KEY });
     return;
   }
 
@@ -184,7 +198,7 @@ async function applyReservationsByCron(env) {
   );
 
   if (dueReservations.length === 0) {
-    console.log(`${LOG_PREFIX} skipped: no due reservations (now=${today} ${nowTime})`);
+    logCron("info", "skipped: no due reservations", { now: `${today} ${nowTime}` });
     return;
   }
 
@@ -213,9 +227,13 @@ async function applyReservationsByCron(env) {
       reservations: nextReservations,
     }),
   );
-  console.log(
-    `${LOG_PREFIX} applied: reservationId=${latest.id} time=${latest.time} mode=${latest.settings.mode} baseTemperature=${latest.settings.baseTemperature} markedCount=${dueReservations.length}`,
-  );
+  logCron("info", "applied", {
+    reservationId: latest.id,
+    time: latest.time,
+    mode: latest.settings.mode,
+    baseTemperature: latest.settings.baseTemperature,
+    markedCount: dueReservations.length,
+  });
 }
 
 const worker = {
@@ -223,7 +241,9 @@ const worker = {
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(
       applyReservationsByCron(env).catch((error) => {
-        console.error(`${LOG_PREFIX} failed: ${error instanceof Error ? error.message : String(error)}`);
+        logCron("error", "failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
         throw error;
       }),
     );
