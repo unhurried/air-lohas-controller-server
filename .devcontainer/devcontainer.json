@@ -10,6 +10,13 @@
 		// 	"version": "latest"
 		// },
 		"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}		
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GitHub.vscode-github-actions"
+			]
+		}
 	}
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
