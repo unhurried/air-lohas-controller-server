@@ -9,7 +9,7 @@ import {
 } from "./aircon-types";
 import { normalizeMode, parseMode } from "./aircon-mode";
 
-const SETTINGS_KEY = "aircon-settings-v1";
+export const SETTINGS_KEY = "aircon-settings-v1";
 const DEFAULT_UPDATED_AT = "1970-01-01T00:00:00.000Z";
 
 const DEFAULT_SETTINGS: AirconSettings = {
@@ -140,7 +140,7 @@ function normalizeReservation(value: unknown): AirconReservation | null {
   };
 }
 
-function normalizeState(value: unknown): AirconState {
+export function normalizeState(value: unknown): AirconState {
   const source = (value ?? {}) as {
     currentSettings?: unknown;
     reservations?: unknown;

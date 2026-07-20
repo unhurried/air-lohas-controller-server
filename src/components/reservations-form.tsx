@@ -211,6 +211,7 @@ export function ReservationsForm({
           <input
             type="time"
             step={60}
+            lang="ja-JP"
             aria-label="時刻"
             value={reservationTime}
             onChange={(event) => setReservationTime(event.target.value)}
@@ -282,6 +283,7 @@ export function ReservationsForm({
                         <input
                           type="time"
                           step={60}
+                          lang="ja-JP"
                           value={reservation.time}
                           onChange={(event) =>
                             updateEditTime(reservation.id, event.target.value)
