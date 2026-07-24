@@ -3,8 +3,10 @@ import openNextWorker, {
   DOQueueHandler,
   DOShardedTagCache,
 } from "./.open-next/worker.js";
-import { SETTINGS_KEY, normalizeState } from "./src/lib/aircon-settings.ts";
-import { applyDueReservation } from "./src/lib/aircon-cron.ts";
+import {
+  AirconStateDO,
+  AC_STATE_SINGLETON,
+} from "./src/lib/aircon-state-do.ts";
 
 function logCron(level, message, context = {}) {
   const line = JSON.stringify({
@@ -22,27 +24,20 @@ function logCron(level, message, context = {}) {
 }
 
 async function applyReservationsByCron(env) {
-  const kv = env.AC_SETTINGS_KV;
-  if (!kv) {
-    logCron("error", "skipped: AC_SETTINGS_KV binding is missing");
+  const namespace = env.AC_STATE;
+  if (!namespace) {
+    logCron("error", "skipped: AC_STATE binding is missing");
     return;
   }
 
-  const raw = await kv.get(SETTINGS_KEY);
-  if (!raw) {
-    logCron("info", "skipped: settings not found", { key: SETTINGS_KEY });
-    return;
-  }
-
-  const state = normalizeState(JSON.parse(raw));
-  const result = applyDueReservation(state, new Date());
+  const stub = namespace.get(namespace.idFromName(AC_STATE_SINGLETON));
+  const result = await stub.applyDueReservations(new Date().toISOString());
 
   if (!result) {
     logCron("info", "skipped: no due reservations");
     return;
   }
 
-  await kv.put(SETTINGS_KEY, JSON.stringify(result.nextState));
   logCron("info", "applied", {
     reservationId: result.applied.id,
     time: result.applied.time,
@@ -67,4 +62,4 @@ const worker = {
 };
 
 export default worker;
-export { DOQueueHandler, DOShardedTagCache, BucketCachePurge };
+export { DOQueueHandler, DOShardedTagCache, BucketCachePurge, AirconStateDO };

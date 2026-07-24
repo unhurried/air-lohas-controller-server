@@ -37,5 +37,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // api/state は Bearer トークンでルート側が独立して認証するため middleware から除外する。
+  // 他のルート（client-logs 含む）は従来どおり ACCESS_SECRET のクエリ/Cookie で保護する。
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/state).*)"],
 };

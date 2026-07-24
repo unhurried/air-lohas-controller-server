@@ -1,6 +1,8 @@
+import type { AirconStateDO } from "../lib/aircon-state-do";
+
 declare global {
   interface CloudflareEnv {
-    AC_SETTINGS_KV: KVNamespace;
+    AC_STATE: DurableObjectNamespace<AirconStateDO>;
   }
 }
 

@@ -21,20 +21,39 @@
 	"env": {
 		"stg": {
 			"name": "ac-stg1",
-			"kv_namespaces": [
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "AC_STATE",
+						"class_name": "AirconStateDO"
+					}
+				]
+			},
+			"migrations": [
 				{
-					"binding": "AC_SETTINGS_KV",
-					"id": "d5fbebe844d24aa9896ef9dbaafff68c",
-					"remote": true
+					"tag": "v1",
+					"new_sqlite_classes": [
+						"AirconStateDO"
+					]
 				}
 			]
 		},
 		"prod": {
 			"name": "ac",
-			"kv_namespaces": [
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "AC_STATE",
+						"class_name": "AirconStateDO"
+					}
+				]
+			},
+			"migrations": [
 				{
-					"binding": "AC_SETTINGS_KV",
-					"id": "02eed31c81ec4feb84b6fba8cc3a3352",
+					"tag": "v1",
+					"new_sqlite_classes": [
+						"AirconStateDO"
+					]
 				}
 			]
 		}

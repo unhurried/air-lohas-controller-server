@@ -1,3 +1,11 @@
+/**
+ * Durable Object の単一インスタンス名。アプリ側（aircon-settings.ts）と
+ * Cron（worker.mjs）の双方が同じ id を参照するために共有する。
+ * cloudflare:workers に依存しない純粋モジュールに置くことで、DO クラス本体を
+ * 読み込めない環境（Vitest / next dev）からも安全に import できる。
+ */
+export const AC_STATE_SINGLETON = "singleton";
+
 export const ROOM_NAMES = [
   "リビング",
   "寝室",
