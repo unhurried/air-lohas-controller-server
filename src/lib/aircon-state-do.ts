@@ -145,6 +145,7 @@ export class AirconStateDO extends DurableObject {
       ...normalized,
       updatedAt: new Date().toISOString(),
     });
+    this.broadcastStateChanged();
   }
 
   /** 予約一覧を全置換で保存する。現在設定はそのまま。 */
@@ -153,6 +154,7 @@ export class AirconStateDO extends DurableObject {
       .map((reservation) => normalizeReservation(reservation))
       .filter((reservation): reservation is AirconReservation => reservation !== null);
     this.writeReservations(normalized);
+    this.broadcastStateChanged();
   }
 
   /**
@@ -170,7 +172,49 @@ export class AirconStateDO extends DurableObject {
 
     this.writeCurrentSettings(result.nextState.currentSettings);
     this.writeReservations(result.nextState.reservations);
+    this.broadcastStateChanged();
 
     return result;
+  }
+
+  /**
+   * WebSocket アップグレードのみを扱う fetch ハンドラ。フォームの即時更新用に、
+   * 状態変更のたびに接続中の全クライアントへ通知を送る（Hibernation API）。
+   * 実際の状態は通知を受けたクライアントが getState() 相当（RSC の再取得）で
+   * 取りに行くため、ここでは変更があった事実だけを送る。
+   */
+  fetch(request: Request): Response {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("Expected WebSocket upgrade", { status: 426 });
+    }
+
+    const pair = new WebSocketPair();
+    const [client, server] = Object.values(pair);
+    this.ctx.acceptWebSocket(server);
+
+    return new Response(null, { status: 101, webSocket: client });
+  }
+
+  async webSocketMessage(): Promise<void> {
+    // クライアント→サーバのメッセージは扱わない（状態変更通知の一方向配信のみ）。
+  }
+
+  async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
+    ws.close(code, reason);
+  }
+
+  async webSocketError(): Promise<void> {
+    // 個別ソケットのエラーは無視する。切断は webSocketClose 側で処理される。
+  }
+
+  private broadcastStateChanged(): void {
+    const payload = JSON.stringify({ type: "state-changed" });
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(payload);
+      } catch {
+        // 送信に失敗したソケットは無視する（クローズは別途ハンドリングされる）。
+      }
+    }
   }
 }

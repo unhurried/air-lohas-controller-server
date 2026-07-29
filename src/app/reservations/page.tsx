@@ -9,6 +9,7 @@ import {
 } from "@/lib/aircon-settings";
 import { ReservationsForm } from "@/components/reservations-form";
 import { RefreshOnFocus } from "@/components/refresh-on-focus";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -101,6 +102,7 @@ export default async function ReservationsPage() {
   return (
     <main className="min-h-screen bg-background px-3 py-4 text-foreground sm:px-4 sm:py-10">
       <RefreshOnFocus />
+      <RealtimeRefresh />
       <section className="mx-auto w-full max-w-3xl rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:rounded-xl sm:p-6 dark:border-zinc-800 dark:bg-zinc-950">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold sm:text-2xl">予約設定</h1>

@@ -1,8 +1,10 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-const ACCESS_QUERY_PARAM = "key";
-const ACCESS_COOKIE = "ah_ctrl_access";
+import {
+  ACCESS_COOKIE,
+  hasValidAccessCookie,
+  hasValidAccessKey,
+} from "@/lib/access-auth";
 
 function forbiddenResponse() {
   return new NextResponse("Forbidden", { status: 403 });
@@ -14,13 +16,11 @@ export function middleware(request: NextRequest) {
     return forbiddenResponse();
   }
 
-  const cookieValue = request.cookies.get(ACCESS_COOKIE)?.value;
-  if (cookieValue === accessSecret) {
+  if (hasValidAccessCookie(request.headers.get("cookie"), accessSecret)) {
     return NextResponse.next();
   }
 
-  const key = request.nextUrl.searchParams.get(ACCESS_QUERY_PARAM);
-  if (key !== accessSecret) {
+  if (!hasValidAccessKey(request.url, accessSecret)) {
     return forbiddenResponse();
   }
 
