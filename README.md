@@ -6,6 +6,13 @@
 
 ## 開発手順
 
+### ランタイム・開発ツール
+
+- Node.js 26 LTS（26.13.0以上、27未満）。`.node-version`、Dev Container、CIで使用するバージョンを揃える。
+- TypeScriptは6.0系、ESLintは9系を使用する。`eslint-config-next`が依存するTypeScript ESLintとReact関連プラグインの対応範囲に合わせる。
+- 依存ライブラリは`npm ci`で`package-lock.json`のバージョンを再現する。
+- 更新時は`.npmrc`の`min-release-age=7`に従い、公開から7日以上経過した安定版を使用する。
+
 ### 開発コマンド
 
 | コマンド | 用途 |
@@ -29,7 +36,7 @@
 - 下記のコマンドでアプリケーションを開発モードで起動する。
 
   ```bash
-  npm install
+  npm ci
   npm run dev
   ```
 

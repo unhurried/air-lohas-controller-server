@@ -2,6 +2,9 @@
   "name": "air-lohas-controller-server",
   "version": "0.6.0",
   "private": true,
+  "engines": {
+    "node": ">=26.13.0 <27"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -15,23 +18,23 @@
     "cf:deploy:prod": "opennextjs-cloudflare build && opennextjs-cloudflare deploy --env prod"
   },
   "dependencies": {
-    "next": "16.2.9",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
+    "next": "16.4.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260227.0",
-    "@opennextjs/cloudflare": "^1.16.5",
-    "@playwright/test": "^1.61.0",
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.67.0"
+    "@cloudflare/workers-types": "^5.20261102.1",
+    "@opennextjs/cloudflare": "^1.20.15",
+    "@playwright/test": "^1.64.1",
+    "@tailwindcss/postcss": "^4.3.4",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.4.4",
+    "tailwindcss": "^4.3.4",
+    "typescript": "~6.0.3",
+    "vitest": "^5.1.0",
+    "wrangler": "^4.156.2"
   }
 }

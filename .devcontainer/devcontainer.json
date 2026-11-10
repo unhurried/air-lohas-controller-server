@@ -12,7 +12,7 @@
       "username": "vscode"
     },
     "ghcr.io/devcontainers/features/node:2": {
-      "version": "latest",
+      "version": "26.13.0",
       "nodeGypDependencies": true
     },
     "ghcr.io/devcontainers/features/python:1": {

@@ -200,7 +200,9 @@ export class AirconStateDO extends DurableObject {
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
-    ws.close(code, reason);
+    // 予約済みの終了コードは切断イベントで通知されても、フレームとして送信できない。
+    const closeCode = [1004, 1005, 1006, 1015].includes(code) ? 1000 : code;
+    ws.close(closeCode, reason);
   }
 
   async webSocketError(): Promise<void> {
